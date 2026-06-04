@@ -10,7 +10,7 @@ services:
   - type: web
     name: empreende-api
     runtime: node
-    rootDir: backend
+    rootDir: ProjetoIntegradorFUMEC-main/backend
     plan: free
     buildCommand: npm install --omit=dev
     startCommand: npm run render:start
@@ -36,7 +36,7 @@ services:
   - type: web
     name: empreende-frontend
     runtime: static
-    rootDir: .
+    rootDir: ProjetoIntegradorFUMEC-main
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
