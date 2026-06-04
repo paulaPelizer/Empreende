@@ -131,7 +131,7 @@ export function Jornada({ onOpenModule }: JornadaProps) {
                     {/* Stats */}
                     <div className="flex items-center gap-6 mb-3 text-sm text-[var(--graphite)]/70">
                       <div>
-                        <span className="font-medium text-[var(--graphite)]">{module.completedLessons}</span>/{module.lessons} aulas
+                        <span className="font-medium text-[var(--graphite)]">{module.completedLessons}</span>/{module.lessons} etapas
                       </div>
                       <div>•</div>
                       <div>{module.progress}% completo</div>

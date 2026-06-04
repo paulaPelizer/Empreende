@@ -28,6 +28,9 @@ services:
         value: '*'
       - key: DB_SSL
         value: 'false'
+      # Mantém o usuário demo zerado a cada novo deploy; mude para 'false' se quiser preservar testes do demo.
+      - key: RESET_DEMO_PROGRESS
+        value: 'true'
       - key: DATABASE_URL
         fromDatabase:
           name: empreende-db

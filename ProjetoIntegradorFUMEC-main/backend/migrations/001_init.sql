@@ -40,9 +40,12 @@ CREATE TABLE IF NOT EXISTS module_steps (
   description TEXT NOT NULL,
   content_type TEXT NOT NULL CHECK (content_type IN ('video', 'activity', 'pdf')),
   position INTEGER NOT NULL,
+  content JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (module_id, step_key)
 );
+
+ALTER TABLE module_steps ADD COLUMN IF NOT EXISTS content JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS user_step_progress (
   id SERIAL PRIMARY KEY,
@@ -146,6 +149,7 @@ CREATE TABLE IF NOT EXISTS preference_settings (
 
 CREATE INDEX IF NOT EXISTS idx_user_step_progress_user_module ON user_step_progress(user_id, module_id);
 CREATE INDEX IF NOT EXISTS idx_activity_responses_user_module ON module_activity_responses(user_id, module_id);
+CREATE INDEX IF NOT EXISTS idx_activity_responses_user_updated ON module_activity_responses(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_discussions_category ON discussions(category);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_status ON mentoring_sessions(user_id, status);
 

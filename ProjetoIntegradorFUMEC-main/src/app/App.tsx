@@ -8,6 +8,7 @@ import { Mentoria } from './components/Mentoria';
 import { Comunidade } from './components/Comunidade';
 import { Certificados } from './components/Certificados';
 import { Configuracoes } from './components/Configuracoes';
+import { Respostas } from './components/Respostas';
 import { AuthPage } from './components/AuthPage';
 import { ModuloPage } from './components/ModuloPage';
 import { authService, type User } from '../services/authService';
@@ -71,13 +72,15 @@ export default function App() {
       case 'jornada':
         return <Jornada onOpenModule={handleOpenModule} />;
       case 'modulo':
-        return <ModuloPage moduleId={selectedModuleId} onBack={() => setActiveTab('jornada')} />;
+        return <ModuloPage moduleId={selectedModuleId} onBack={() => setActiveTab('jornada')} onOpenModule={handleOpenModule} />;
       case 'mentoria':
         return <Mentoria />;
       case 'comunidade':
         return <Comunidade />;
       case 'certificados':
         return <Certificados />;
+      case 'respostas':
+        return <Respostas />;
       case 'configuracoes':
         return <Configuracoes />;
       default:

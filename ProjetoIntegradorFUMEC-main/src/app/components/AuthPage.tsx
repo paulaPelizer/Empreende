@@ -63,7 +63,7 @@ export function AuthPage({ onAuthSuccess }: AuthPageProps) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {['Vídeo-aulas', 'Atividades', 'PDFs de apoio'].map((item) => (
+            {['Vídeos', 'Atividades', 'Materiais de apoio'].map((item) => (
               <div key={item} className="bg-white/90 dark:bg-[var(--card)] rounded-2xl p-4 border border-gray-200/60 dark:border-[var(--border)] shadow-sm">
                 <div className="w-10 h-10 rounded-xl bg-[var(--coral-neon)]/10 flex items-center justify-center mb-3">
                   <Sparkles className="w-5 h-5 text-[var(--coral-neon)]" />

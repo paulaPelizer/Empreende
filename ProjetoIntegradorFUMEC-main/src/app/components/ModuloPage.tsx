@@ -11,16 +11,21 @@ import {
   Save,
   Loader2,
 } from 'lucide-react';
-import { jornadaService, type JornadaModuleContent } from '../../services/jornadaService';
+import {
+  jornadaService,
+  type JornadaFieldConfig,
+  type JornadaModuleContent,
+  type JornadaStep,
+  type ModuleActivity,
+} from '../../services/jornadaService';
 
 interface ModuloPageProps {
   moduleId: number;
   onBack: () => void;
+  onOpenModule?: (moduleId: number) => void;
 }
 
-type StepKey = 'video' | 'avaliacao1' | 'pdf' | 'avaliacao2';
-
-interface ModuleContent {
+interface ModuleContentFallback {
   id: number;
   sector: string;
   title: string;
@@ -29,120 +34,126 @@ interface ModuleContent {
   videoUrl?: string | null;
   pdfTitle: string;
   pdfUrl?: string | null;
+  progress?: number;
 }
 
-const moduleContent: ModuleContent[] = [
+const moduleContent: ModuleContentFallback[] = [
   {
     id: 1,
-    sector: 'Empresas de alimentos / comércio de alimentos',
-    title: 'Missão, visão e valores',
-    subtitle: 'Construa a base estratégica da sua empresa a partir de propósito, futuro desejado e princípios de atuação.',
-    videoTitle: 'Como definir missão, visão e valores para empresas de alimentos',
-    pdfTitle: 'Guia prático: missão, visão e valores para empresas de alimentos',
+    sector: 'Empreendedorismo e pequenos negócios de alimentos',
+    title: 'Sobre a empresa: missão, visão e valores',
+    subtitle: 'Defina o que a empresa faz, onde quer chegar e quais princípios orientam atendimento, produção, qualidade e relação com clientes.',
+    videoTitle: 'O que são a Visão, Missão e os Valores de uma empresa - Sebrae Talks',
+    videoUrl: 'https://www.youtube.com/embed/EfKT92XtJlA',
+    pdfTitle: 'Ferramenta Sebrae: Missão, Visão e Valores',
+    pdfUrl: 'https://www.sebrae.com.br/Sebrae/Portal%20Sebrae/Anexos/ME_Missao-Visao-Valores.PDF',
   },
   {
     id: 2,
-    sector: 'Empresas de alimentos / comércio de alimentos',
+    sector: 'Mercado local, alimentos e comportamento do consumidor',
     title: 'Análise de mercado',
-    subtitle: 'Observe público, concorrentes e oportunidades para melhorar o posicionamento do negócio.',
-    videoTitle: 'Introdução à análise de mercado para pequenos negócios',
-    pdfTitle: 'Roteiro de análise de mercado e concorrência',
+    subtitle: 'Mapeie quem compra, onde compra, por que compra e quais alternativas existem no entorno ou no digital.',
+    videoTitle: 'Como analisar a concorrência em 5 passos simples - Sebrae PR',
+    videoUrl: 'https://www.youtube.com/embed/lvMnb6lO42k',
+    pdfTitle: 'Sebrae: Como elaborar uma pesquisa de mercado',
+    pdfUrl: 'https://www.sebrae.com.br/Sebrae/Portal%20Sebrae/UFs/MG/Sebrae%20de%20A%20a%20Z/Como%2BElaborar%2Buma%2BPesquisa%2Bde%2BMercado.pdf',
   },
   {
     id: 3,
-    sector: 'Empresas de alimentos / comércio de alimentos',
+    sector: 'Canvas, proposta de valor e validação',
     title: 'Modelo de negócio',
-    subtitle: 'Organize proposta de valor, canais, fontes de receita e relacionamento com clientes.',
-    videoTitle: 'Como estruturar um modelo de negócio simples e viável',
-    pdfTitle: 'Canvas aplicado ao comércio de alimentos',
+    subtitle: 'Transforme a ideia em uma estrutura de funcionamento, com blocos visuais e um plano 5W2H para testar o próximo passo.',
+    videoTitle: 'Sebrae Canvas: crie o seu modelo de negócios',
+    videoUrl: 'https://www.youtube.com/embed/fkxRC0_x48E',
+    pdfTitle: 'Sebrae: Canvas - Modelo de Negócios',
+    pdfUrl: 'https://bibliotecas.sebrae.com.br/chronus/ARQUIVOS_CHRONUS/bds/bds.nsf/e0660b16874d7be9b1628ea138e4cc1c/%24File/30595.pdf',
+  },
+  {
+    id: 4,
+    sector: 'Letramento digital aplicado a alimentos',
+    title: 'Letramento digital e perspectivas para seu negócio',
+    subtitle: 'Escolha usos digitais simples e coerentes com o perfil do cliente: divulgação, pedidos, fotos, cardápio, avaliações, delivery e relacionamento.',
+    videoTitle: 'Transformação Digital Para Pequenos Negócios - Connect Sebrae',
+    videoUrl: 'https://www.youtube.com/embed/MJ2fWDLBtjU',
+    pdfTitle: 'Sebrae PR: passo a passo para um delivery de sucesso',
+    pdfUrl: 'https://api.pr.sebrae.com.br/storage/comunidade/anexos/13880/PUB_%20Fast%20Track%20de%20Intelig%C3%AAncia%20-%20Passo%20a%20Passo%20para%20um%20Delivery%20de%20Sucesso%20-%2018052023.pdf',
+  },
+  {
+    id: 5,
+    sector: 'Ferramentas de gestão para pequenos negócios',
+    title: 'Ferramentas digitais para administração e comunicação',
+    subtitle: 'Estruture controles mínimos para administrar uma pequena empresa de alimentos sem complicar: Excel/Sheets, estoque, vendas, clientes e comunicação.',
+    videoTitle: 'Controle de estoque: aprenda a controlar seu estoque de maneira simples - Sebrae PR',
+    videoUrl: 'https://www.youtube.com/embed/5Anr9ipqzbc',
+    pdfTitle: 'Sebrae: ideia de negócio Churrasquinho - gestão, planilhas e automação',
+    pdfUrl: 'https://bibliotecas.sebrae.com.br/chronus/ARQUIVOS_CHRONUS/IDEIAS_DE_NEGOCIO/PDFS/ideia-de-negocio_churrasquinho.pdf',
   },
 ];
-
-const steps: Array<{ key: StepKey; label: string; description: string; icon: typeof PlayCircle }> = [
-  { key: 'video', label: 'Vídeo', description: 'Assista à explicação inicial', icon: PlayCircle },
-  { key: 'avaliacao1', label: 'Atividade 1', description: 'Produza sua primeira resposta', icon: ClipboardCheck },
-  { key: 'pdf', label: 'PDF', description: 'Consulte o material de apoio', icon: FileText },
-  { key: 'avaliacao2', label: 'Atividade 2', description: 'Revise e aperfeiçoe a resposta', icon: CheckCircle },
+const fallbackSteps: JornadaStep[] = [
+  { key: 'video', label: 'Vídeo', description: 'Assista à explicação inicial', contentType: 'video', position: 1, completed: false },
+  { key: 'avaliacao1', label: 'Atividade 1', description: 'Produza sua primeira resposta', contentType: 'activity', position: 2, completed: false },
+  { key: 'pdf', label: 'PDF', description: 'Consulte o material de apoio', contentType: 'pdf', position: 3, completed: false },
+  { key: 'avaliacao2', label: 'Atividade 2', description: 'Revise e finalize o módulo', contentType: 'activity', position: 4, completed: false },
 ];
 
-const checklistItems = [
-  'A missão explica claramente o que a empresa faz?',
-  'A visão apresenta um objetivo futuro possível de alcançar?',
-  'Os valores orientam decisões e comportamentos da empresa?',
-  'O texto está simples, direto e coerente com o tipo de negócio?',
+const defaultFields: JornadaFieldConfig[] = [
+  { key: 'resposta', label: 'Resposta', placeholder: 'Registre sua resposta aqui.' },
+];
+
+const defaultChecklist = [
+  'A resposta está clara?',
+  'A resposta está conectada ao negócio?',
+  'A resposta apresenta uma decisão ou hipótese prática?',
+  'O texto está simples e direto?',
 ];
 
 interface ActivityFormProps {
-  title: string;
-  description: string;
+  step: JornadaStep;
   values: Record<string, string>;
   checks: Record<string, boolean>;
-  finalReview?: boolean;
+  submitted?: boolean;
   onChangeValue: (field: string, value: string) => void;
   onToggleCheck: (item: string) => void;
-  onSave: () => void;
+  onSaveDraft: () => void;
 }
 
 function ActivityForm({
-  title,
-  description,
+  step,
   values,
   checks,
-  finalReview = false,
+  submitted = false,
   onChangeValue,
   onToggleCheck,
-  onSave,
+  onSaveDraft,
 }: ActivityFormProps) {
+  const fields = step.content?.fields?.length ? step.content.fields : defaultFields;
+  const checklist = step.content?.checklist?.length ? step.content.checklist : defaultChecklist;
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-2 bg-white/95 dark:bg-[var(--card)] rounded-2xl border border-gray-200/60 dark:border-[var(--border)] shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-[var(--graphite)]">{title}</h2>
-          <p className="text-[var(--graphite)]/70 mt-1">{description}</p>
+          <h2 className="text-2xl font-bold text-[var(--graphite)]">{step.content?.title ?? step.label}</h2>
+          <p className="text-[var(--graphite)]/70 mt-1">{step.content?.description ?? step.description}</p>
+          {submitted && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm border border-green-200">
+              <CheckCircle className="w-4 h-4" /> Atividade enviada
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-[var(--graphite)] mb-2">Missão</label>
-            <textarea
-              value={values.missao}
-              onChange={(event) => onChangeValue('missao', event.target.value)}
-              placeholder="Ex.: Oferecer alimentos frescos, acessíveis e de qualidade para a comunidade local."
-              className="w-full min-h-24 p-4 rounded-2xl bg-[var(--skin-tone-light)]/50 dark:bg-[var(--skin-tone)] border border-[var(--skin-tone-dark)]/40 text-[var(--graphite)] outline-none focus:ring-2 focus:ring-[var(--coral-neon)]/40"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-[var(--graphite)] mb-2">Visão</label>
-            <textarea
-              value={values.visao}
-              onChange={(event) => onChangeValue('visao', event.target.value)}
-              placeholder="Ex.: Ser reconhecida como referência regional em atendimento e qualidade alimentar."
-              className="w-full min-h-24 p-4 rounded-2xl bg-[var(--skin-tone-light)]/50 dark:bg-[var(--skin-tone)] border border-[var(--skin-tone-dark)]/40 text-[var(--graphite)] outline-none focus:ring-2 focus:ring-[var(--coral-neon)]/40"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-[var(--graphite)] mb-2">Valores</label>
-            <textarea
-              value={values.valores}
-              onChange={(event) => onChangeValue('valores', event.target.value)}
-              placeholder="Ex.: qualidade, confiança, respeito, responsabilidade, atendimento humanizado."
-              className="w-full min-h-24 p-4 rounded-2xl bg-[var(--skin-tone-light)]/50 dark:bg-[var(--skin-tone)] border border-[var(--skin-tone-dark)]/40 text-[var(--graphite)] outline-none focus:ring-2 focus:ring-[var(--coral-neon)]/40"
-            />
-          </div>
-
-          {finalReview && (
-            <div>
-              <label className="block text-sm font-semibold text-[var(--graphite)] mb-2">O que você melhorou após consultar o PDF?</label>
+          {fields.map((field) => (
+            <div key={field.key}>
+              <label className="block text-sm font-semibold text-[var(--graphite)] mb-2">{field.label}</label>
               <textarea
-                value={values.revisao}
-                onChange={(event) => onChangeValue('revisao', event.target.value)}
-                placeholder="Descreva os principais ajustes feitos na sua missão, visão e valores."
+                value={values[field.key] ?? ''}
+                onChange={(event) => onChangeValue(field.key, event.target.value)}
+                placeholder={field.placeholder ?? 'Digite sua resposta.'}
                 className="w-full min-h-24 p-4 rounded-2xl bg-[var(--skin-tone-light)]/50 dark:bg-[var(--skin-tone)] border border-[var(--skin-tone-dark)]/40 text-[var(--graphite)] outline-none focus:ring-2 focus:ring-[var(--coral-neon)]/40"
               />
             </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -151,7 +162,7 @@ function ActivityForm({
         <p className="text-sm text-[var(--graphite)]/60 mb-4">Marque os critérios que sua resposta já atende.</p>
 
         <div className="space-y-3">
-          {checklistItems.map((item) => (
+          {checklist.map((item) => (
             <label key={item} className="flex gap-3 items-start p-3 rounded-xl hover:bg-[var(--skin-tone-light)]/60 dark:hover:bg-[var(--skin-tone)] transition-colors cursor-pointer">
               <input
                 type="checkbox"
@@ -166,7 +177,7 @@ function ActivityForm({
 
         <button
           type="button"
-          onClick={onSave}
+          onClick={onSaveDraft}
           className="mt-6 w-full py-3 rounded-2xl bg-[var(--coral-neon)] text-white font-semibold shadow-md hover:bg-[var(--coral-neon-dark)] transition-all flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
@@ -177,8 +188,11 @@ function ActivityForm({
   );
 }
 
-function VideoStep({ content }: { content: ModuleContent }) {
+function VideoStep({ content, step }: { content: ModuleContentFallback | JornadaModuleContent; step: JornadaStep }) {
   const hasVideo = !!content.videoUrl && !content.videoUrl.includes('VIDEO_MODULO');
+  const objectives = step.content?.objectives?.length
+    ? step.content.objectives
+    : ['Entender o conceito central do módulo.', 'Relacionar o conteúdo ao seu negócio.', 'Preparar ideias para a atividade prática.'];
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -193,24 +207,16 @@ function VideoStep({ content }: { content: ModuleContent }) {
               allowFullScreen
             />
           ) : (
-            <>
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_left,_white,_transparent_35%)]" />
-              <div className="relative flex flex-col items-center gap-3 text-center px-6">
-                <button className="w-24 h-24 rounded-full bg-white/95 text-[var(--coral-neon)] shadow-xl flex items-center justify-center hover:scale-105 transition-transform">
-                  <PlayCircle className="w-14 h-14" />
-                </button>
-                <p className="text-white/85 text-sm max-w-lg">
-                  O espaço do vídeo já está conectado ao campo <strong>video_url</strong> do banco.
-                  Troque o link placeholder pelo link incorporável do vídeo.
-                </p>
-              </div>
-            </>
+            <div className="relative flex flex-col items-center gap-3 text-center px-6">
+              <PlayCircle className="w-20 h-20 text-white" />
+              <p className="text-white/85 text-sm max-w-lg">Vídeo ainda não configurado.</p>
+            </div>
           )}
         </div>
         <div className="p-6">
           <h2 className="text-2xl font-bold text-[var(--graphite)]">{content.videoTitle}</h2>
           <p className="text-[var(--graphite)]/70 mt-2">
-            Neste primeiro momento, o aluno assiste ao conteúdo explicativo e identifica exemplos antes de iniciar a atividade prática.
+            Assista ao conteúdo e depois use o botão no rodapé para marcar esta etapa como concluída.
           </p>
         </div>
       </div>
@@ -218,17 +224,22 @@ function VideoStep({ content }: { content: ModuleContent }) {
       <aside className="bg-white/95 dark:bg-[var(--card)] rounded-2xl border border-gray-200/60 dark:border-[var(--border)] shadow-sm p-6 h-fit">
         <h3 className="font-bold text-[var(--graphite)] mb-3">Objetivos do vídeo</h3>
         <ul className="space-y-3 text-sm text-[var(--graphite)]/75">
-          <li className="flex gap-2"><CheckCircle className="w-5 h-5 text-[var(--coral-neon)] shrink-0" /> Entender a diferença entre missão, visão e valores.</li>
-          <li className="flex gap-2"><CheckCircle className="w-5 h-5 text-[var(--coral-neon)] shrink-0" /> Relacionar os conceitos ao setor de alimentos.</li>
-          <li className="flex gap-2"><CheckCircle className="w-5 h-5 text-[var(--coral-neon)] shrink-0" /> Preparar ideias para a primeira atividade.</li>
+          {objectives.map((objective) => (
+            <li key={objective} className="flex gap-2">
+              <CheckCircle className="w-5 h-5 text-[var(--coral-neon)] shrink-0" /> {objective}
+            </li>
+          ))}
         </ul>
       </aside>
     </div>
   );
 }
 
-function PdfStep({ content }: { content: ModuleContent }) {
+function PdfStep({ content, step }: { content: ModuleContentFallback | JornadaModuleContent; step: JornadaStep }) {
   const hasPdf = !!content.pdfUrl && !content.pdfUrl.includes('SEU_BUCKET');
+  const instructions = step.content?.instructions?.length
+    ? step.content.instructions
+    : ['Leia o material de apoio.', 'Compare com sua resposta inicial.', 'Use as ideias na atividade final.'];
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -238,7 +249,7 @@ function PdfStep({ content }: { content: ModuleContent }) {
             <FileText className="w-6 h-6 text-[var(--coral-neon)]" />
             <div>
               <h2 className="font-bold text-[var(--graphite)]">{content.pdfTitle}</h2>
-              <p className="text-xs text-[var(--graphite)]/60">Visualização de PDF do módulo</p>
+              <p className="text-xs text-[var(--graphite)]/60">Material de apoio do módulo</p>
             </div>
           </div>
           {hasPdf && (
@@ -263,76 +274,68 @@ function PdfStep({ content }: { content: ModuleContent }) {
             />
           ) : (
             <div className="w-full max-w-2xl bg-white text-gray-900 rounded-xl shadow-lg p-8 border border-gray-200">
-              <div className="text-xs text-gray-500 mb-5">1 - {content.sector}</div>
-              <div className="border-2 border-gray-900 rounded-2xl p-6 min-h-[430px]">
-                <div className="border border-gray-900 rounded-xl px-4 py-2 text-center text-sm font-semibold mb-6">
-                  {content.title} para empresas de alimentos
-                </div>
-                <h3 className="text-xl font-bold text-center mb-6">Missão, Visão e Valores</h3>
-                <p className="text-sm leading-7 mb-4">
-                  A missão apresenta a razão de existir da empresa. A visão mostra onde o negócio deseja chegar. Os valores indicam os princípios que orientam decisões, atendimento e relacionamento com clientes.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-                  {['Missão', 'Visão', 'Valores'].map((item) => (
-                    <div key={item} className="border border-gray-900 rounded-xl p-4 min-h-28">
-                      <h4 className="font-bold mb-2">{item}</h4>
-                      <p className="text-xs text-gray-600">Campo de apoio conceitual para revisão da atividade.</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <h3 className="text-xl font-bold text-center mb-6">Material ainda não configurado</h3>
+              <p className="text-sm leading-7">O link do PDF poderá ser atualizado no banco pelo campo pdf_url.</p>
             </div>
           )}
         </div>
       </div>
 
       <aside className="bg-white/95 dark:bg-[var(--card)] rounded-2xl border border-gray-200/60 dark:border-[var(--border)] shadow-sm p-6 h-fit">
-        <h3 className="font-bold text-[var(--graphite)] mb-3">Como usar o PDF</h3>
-        <p className="text-sm text-[var(--graphite)]/70 mb-4">
-          O PDF funciona como apoio entre a primeira tentativa e a atividade final. A ideia é comparar sua resposta inicial com os critérios do material.
-        </p>
+        <h3 className="font-bold text-[var(--graphite)] mb-3">Como usar o material</h3>
         <div className="space-y-3 text-sm text-[var(--graphite)]/75">
-          <div className="p-3 rounded-xl bg-[var(--skin-tone-light)]/70 dark:bg-[var(--skin-tone)]">1. Leia os conceitos principais.</div>
-          <div className="p-3 rounded-xl bg-[var(--skin-tone-light)]/70 dark:bg-[var(--skin-tone)]">2. Compare com sua atividade 1.</div>
-          <div className="p-3 rounded-xl bg-[var(--skin-tone-light)]/70 dark:bg-[var(--skin-tone)]">3. Reescreva na atividade 2.</div>
+          {instructions.map((instruction, index) => (
+            <div key={instruction} className="p-3 rounded-xl bg-[var(--skin-tone-light)]/70 dark:bg-[var(--skin-tone)]">
+              {index + 1}. {instruction}
+            </div>
+          ))}
         </div>
       </aside>
     </div>
   );
 }
 
-export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
+export function ModuloPage({ moduleId, onBack, onOpenModule }: ModuloPageProps) {
   const fallbackContent = useMemo(() => moduleContent.find((item) => item.id === moduleId) ?? moduleContent[0], [moduleId]);
-  const [content, setContent] = useState<ModuleContent | JornadaModuleContent>(fallbackContent);
+  const [content, setContent] = useState<ModuleContentFallback | JornadaModuleContent>(fallbackContent);
   const [activeStep, setActiveStep] = useState(0);
-  const [formValues, setFormValues] = useState<Record<string, string>>({
-    missao: '',
-    visao: '',
-    valores: '',
-    revisao: '',
-  });
+  const [completedStepKeys, setCompletedStepKeys] = useState<Set<string>>(new Set());
+  const [activitiesByStep, setActivitiesByStep] = useState<Record<string, ModuleActivity>>({});
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [apiWarning, setApiWarning] = useState('');
 
-  useEffect(() => {
+  const moduleSteps = useMemo(() => {
+    const loadedSteps = (content as JornadaModuleContent).steps;
+    return loadedSteps?.length ? loadedSteps : fallbackSteps;
+  }, [content]);
+
+  const step = moduleSteps[Math.min(activeStep, moduleSteps.length - 1)] ?? fallbackSteps[0];
+  const currentActivity = activitiesByStep[step.key];
+  const completedCount = completedStepKeys.size;
+  const progress = moduleSteps.length ? Math.round((completedCount / moduleSteps.length) * 100) : 0;
+
+  const loadModule = () => {
     let isMounted = true;
     setLoading(true);
     setApiWarning('');
+    setSaved(false);
+    setActiveStep(0);
     setContent(fallbackContent);
+    setCompletedStepKeys(new Set());
+    setActivitiesByStep({});
+    setFormValues({});
+    setChecks({});
 
     jornadaService
       .getModuleContent(moduleId)
       .then((module) => {
         if (!isMounted) return;
         setContent(module);
-        if (module.activity?.formValues) {
-          setFormValues((current) => ({ ...current, ...module.activity?.formValues }));
-        }
-        if (module.activity?.checks) {
-          setChecks(module.activity.checks);
-        }
+        setCompletedStepKeys(new Set((module.steps ?? []).filter((item) => item.completed).map((item) => item.key)));
+        setActivitiesByStep(module.activities ?? {});
       })
       .catch(() => {
         if (isMounted) {
@@ -346,10 +349,24 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [fallbackContent, moduleId]);
+  };
 
-  const step = steps[activeStep];
-  const progress = Math.round(((activeStep + 1) / steps.length) * 100);
+  useEffect(loadModule, [fallbackContent, moduleId]);
+
+  useEffect(() => {
+    setFormValues(currentActivity?.formValues ?? {});
+    setChecks(currentActivity?.checks ?? {});
+    setSaved(false);
+  }, [currentActivity?.stepKey, step.key]);
+
+  const emitProgressUpdated = () => {
+    window.dispatchEvent(new Event('progress:updated'));
+  };
+
+  const markCompleted = (stepKey: string) => {
+    setCompletedStepKeys((current) => new Set([...Array.from(current), stepKey]));
+    emitProgressUpdated();
+  };
 
   const handleChangeValue = (field: string, value: string) => {
     setFormValues((current) => ({ ...current, [field]: value }));
@@ -361,59 +378,89 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
     setSaved(false);
   };
 
-  const handleSave = async () => {
+  const handleSaveDraft = async () => {
     const payload = { stepKey: step.key, formValues, checks, submitted: false };
 
     try {
-      await jornadaService.saveModuleActivity(content.id, payload);
-      await jornadaService.completeStep(content.id, step.key);
+      const activity = await jornadaService.saveModuleActivity(content.id, payload);
+      setActivitiesByStep((current) => ({ ...current, [step.key]: activity }));
+      setSaved(true);
     } catch {
-      localStorage.setItem(`empreende_modulo_${content.id}_atividade`, JSON.stringify(payload));
+      localStorage.setItem(`empreende_modulo_${content.id}_${step.key}`, JSON.stringify(payload));
       setApiWarning('Não consegui salvar no backend agora. O rascunho foi salvo localmente neste navegador.');
-    } finally {
       setSaved(true);
     }
   };
 
-  const handleNext = async () => {
+  const goNext = () => {
+    setActiveStep((current) => Math.min(moduleSteps.length - 1, current + 1));
+  };
+
+  const handleCompleteContentStep = async () => {
     try {
       await jornadaService.completeStep(content.id, step.key);
+      markCompleted(step.key);
     } catch {
-      // Se a API estiver fora do ar, a navegação continua e o aluno não fica travado.
-    } finally {
-      setActiveStep((current) => Math.min(steps.length - 1, current + 1));
+      setApiWarning('Não consegui registrar esta etapa no backend agora. Tente novamente em alguns segundos.');
+      return;
+    }
+
+    goNext();
+  };
+
+  const handleSubmitActivity = async () => {
+    const payload = { stepKey: step.key, formValues, checks, submitted: true };
+
+    try {
+      const activity = await jornadaService.saveModuleActivity(content.id, payload);
+      setActivitiesByStep((current) => ({ ...current, [step.key]: activity }));
+      markCompleted(step.key);
+      setSaved(true);
+    } catch {
+      localStorage.setItem(`empreende_modulo_${content.id}_${step.key}`, JSON.stringify(payload));
+      setApiWarning('Não consegui enviar para o backend agora. A resposta foi salva localmente neste navegador.');
+      return;
+    }
+
+    const isLastStep = activeStep === moduleSteps.length - 1;
+    if (isLastStep) {
+      if (onOpenModule && content.id < moduleContent.length) {
+        setApiWarning('Módulo finalizado. Abrindo o próximo módulo...');
+        window.setTimeout(() => onOpenModule(content.id + 1), 700);
+      } else {
+        setApiWarning('Módulo finalizado. Você concluiu a jornada disponível.');
+      }
+    } else {
+      goNext();
     }
   };
 
   const renderStep = () => {
-    if (step.key === 'video') return <VideoStep content={content} />;
-    if (step.key === 'pdf') return <PdfStep content={content} />;
-    if (step.key === 'avaliacao1') {
-      return (
-        <ActivityForm
-          title="Atividade prática 1"
-          description="Escreva uma primeira versão da missão, visão e valores da sua empresa. Neste momento, o mais importante é registrar suas ideias iniciais."
-          values={formValues}
-          checks={checks}
-          onChangeValue={handleChangeValue}
-          onToggleCheck={handleToggleCheck}
-          onSave={handleSave}
-        />
-      );
-    }
+    if (step.contentType === 'video') return <VideoStep content={content} step={step} />;
+    if (step.contentType === 'pdf') return <PdfStep content={content} step={step} />;
     return (
       <ActivityForm
-        title="Atividade prática 2"
-        description="Após consultar o PDF, revise sua resposta e faça uma versão mais clara, objetiva e alinhada ao negócio."
+        step={step}
         values={formValues}
         checks={checks}
-        finalReview
+        submitted={currentActivity?.submitted}
         onChangeValue={handleChangeValue}
         onToggleCheck={handleToggleCheck}
-        onSave={handleSave}
+        onSaveDraft={handleSaveDraft}
       />
     );
   };
+
+  const footerButtonText = () => {
+    if (step.contentType === 'activity') {
+      if (activeStep === moduleSteps.length - 1) return step.content?.submitLabel ?? 'Finalizar módulo';
+      return step.content?.submitLabel ?? 'Enviar atividade e avançar';
+    }
+    if (step.contentType === 'pdf') return 'Marcar leitura concluída';
+    return 'Marcar vídeo assistido';
+  };
+
+  const footerAction = step.contentType === 'activity' ? handleSubmitActivity : handleCompleteContentStep;
 
   return (
     <div className="space-y-6">
@@ -429,6 +476,7 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
           {apiWarning}
         </div>
       )}
+
       <div className="bg-white/95 dark:bg-[var(--card)] rounded-2xl p-6 border border-gray-200/60 dark:border-[var(--border)] shadow-sm">
         <button
           type="button"
@@ -448,7 +496,7 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
 
           <div className="min-w-56">
             <div className="flex justify-between text-xs text-[var(--graphite)]/60 mb-2">
-              <span>Progresso da aula</span>
+              <span>Progresso do módulo</span>
               <span>{progress}%</span>
             </div>
             <div className="h-3 bg-[var(--skin-tone-light)] dark:bg-[var(--skin-tone)] rounded-full overflow-hidden">
@@ -459,10 +507,10 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {steps.map((item, index) => {
-          const Icon = item.icon;
+        {moduleSteps.map((item, index) => {
+          const Icon = item.contentType === 'video' ? PlayCircle : item.contentType === 'pdf' ? FileText : ClipboardCheck;
           const isActive = index === activeStep;
-          const isDone = index < activeStep;
+          const isDone = completedStepKeys.has(item.key);
           return (
             <button
               key={item.key}
@@ -489,7 +537,7 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
       {saved && (
         <div className="rounded-2xl bg-green-50 text-green-700 border border-green-200 p-4 flex items-center gap-2">
           <CheckCircle className="w-5 h-5" />
-          Rascunho salvo.
+          Registro salvo.
         </div>
       )}
 
@@ -508,16 +556,15 @@ export function ModuloPage({ moduleId, onBack }: ModuloPageProps) {
 
         <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--graphite)]/60">
           <BookOpen className="w-4 h-4" />
-          Etapa {activeStep + 1} de {steps.length}
+          Etapa {activeStep + 1} de {moduleSteps.length}
         </div>
 
         <button
           type="button"
-          onClick={handleNext}
-          disabled={activeStep === steps.length - 1}
-          className="px-5 py-2.5 rounded-xl bg-[var(--coral-neon)] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--coral-neon-dark)] transition-colors flex items-center gap-2"
+          onClick={footerAction}
+          className="px-5 py-2.5 rounded-xl bg-[var(--coral-neon)] text-white hover:bg-[var(--coral-neon-dark)] transition-colors flex items-center gap-2"
         >
-          Próximo
+          {footerButtonText()}
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

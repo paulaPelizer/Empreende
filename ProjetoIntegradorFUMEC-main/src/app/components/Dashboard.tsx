@@ -4,6 +4,8 @@ import { dashboardService, type DashboardStat, type Activity, type NextStep } fr
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const STAT_ICONS: Record<string, any> = {
+  journey_progress: TrendingUp,
+  completed_modules: CheckCircle,
   modules_completed: CheckCircle,
   study_hours: Clock,
   mentoring_sessions: Target,
@@ -11,6 +13,8 @@ const STAT_ICONS: Record<string, any> = {
 };
 
 const STAT_COLORS: Record<string, { color: string; bgColor: string }> = {
+  journey_progress: { color: 'text-[var(--coral-neon)]', bgColor: 'bg-[var(--skin-tone-light)]' },
+  completed_modules: { color: 'text-[var(--coral-neon)]', bgColor: 'bg-[var(--skin-tone-light)]' },
   modules_completed: { color: 'text-[var(--coral-neon)]', bgColor: 'bg-[var(--skin-tone-light)]' },
   study_hours: { color: 'text-[var(--graphite)]', bgColor: 'bg-[var(--skin-tone)]' },
   mentoring_sessions: { color: 'text-[var(--coral-neon-dark)]', bgColor: 'bg-[var(--skin-tone-light)]' },

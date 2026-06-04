@@ -9,6 +9,7 @@ import { query, transaction } from './db.js';
 import { requireAuth } from './middleware/auth.js';
 import { asyncHandler } from './utils/asyncHandler.js';
 import {
+  toActivityResponse,
   toDiscussion,
   toMentor,
   toModule,
@@ -77,8 +78,11 @@ async function getModulesForUser(userId) {
        m.*,
        COUNT(ms.id)::int AS lessons,
        COALESCE(COUNT(usp.id), 0)::int AS completed_lessons,
-       CASE WHEN m.module_order > 1 AND COALESCE(prev.completed_count, 0) < COALESCE(prev.total_count, 1)
-            THEN false ELSE false END AS is_locked,
+       CASE
+         WHEN m.module_order = 1 THEN false
+         WHEN COALESCE(prev.completed_count, 0) >= COALESCE(NULLIF(prev.total_count, 0), 1) THEN false
+         ELSE true
+       END AS is_locked,
        CASE WHEN COUNT(ms.id) = 0 THEN 0
             ELSE ROUND((COALESCE(COUNT(usp.id), 0)::numeric / COUNT(ms.id)::numeric) * 100)::int
        END AS progress,
@@ -100,6 +104,7 @@ async function getModulesForUser(userId) {
         AND usp2.step_key = ms2.step_key
         AND usp2.user_id = $1
        WHERE m2.module_order = m.module_order - 1
+         AND m2.is_active = true
      ) prev ON true
      WHERE m.is_active = true
      GROUP BY m.id, prev.completed_count, prev.total_count
@@ -116,7 +121,11 @@ async function getModuleRowForUser(userId, moduleId) {
        m.*,
        COUNT(ms.id)::int AS lessons,
        COALESCE(COUNT(usp.id), 0)::int AS completed_lessons,
-       false AS is_locked,
+       CASE
+         WHEN m.module_order = 1 THEN false
+         WHEN COALESCE(prev.completed_count, 0) >= COALESCE(NULLIF(prev.total_count, 0), 1) THEN false
+         ELSE true
+       END AS is_locked,
        CASE WHEN COUNT(ms.id) = 0 THEN 0
             ELSE ROUND((COALESCE(COUNT(usp.id), 0)::numeric / COUNT(ms.id)::numeric) * 100)::int
        END AS progress,
@@ -127,8 +136,21 @@ async function getModuleRowForUser(userId, moduleId) {
        ON usp.module_id = m.id
       AND usp.step_key = ms.step_key
       AND usp.user_id = $1
+     LEFT JOIN LATERAL (
+       SELECT
+         COUNT(ms2.id)::int AS total_count,
+         COUNT(usp2.id)::int AS completed_count
+       FROM modules m2
+       LEFT JOIN module_steps ms2 ON ms2.module_id = m2.id
+       LEFT JOIN user_step_progress usp2
+         ON usp2.module_id = m2.id
+        AND usp2.step_key = ms2.step_key
+        AND usp2.user_id = $1
+       WHERE m2.module_order = m.module_order - 1
+         AND m2.is_active = true
+     ) prev ON true
      WHERE m.id = $2 AND m.is_active = true
-     GROUP BY m.id`,
+     GROUP BY m.id, prev.completed_count, prev.total_count`,
     [userId, moduleId],
   );
   return rows[0];
@@ -219,7 +241,7 @@ async function getDashboardData(userId) {
     .slice(0, 3)
     .map((item) => ({
       title: item.title,
-      module: `Módulo ${item.id}`,
+      module: `Módulo ${item.moduleOrder ?? item.id}`,
       progress: item.progress,
       duration: item.duration,
     }));
@@ -246,10 +268,10 @@ async function getDashboardData(userId) {
 
   return {
     stats: [
-      { key: 'journey_progress', label: 'Progresso da jornada', value: `${totalProgress}%`, total: '100%', trend: '+12%' },
-      { key: 'completed_modules', label: 'Módulos concluídos', value: String(completedModules), total: String(modules.length), trend: '+1' },
-      { key: 'study_hours', label: 'Horas estimadas', value: String(Math.round(completedLessons * 0.5)), total: String(Math.round(totalLessons * 0.5)), trend: '+2h' },
-      { key: 'mentoring_sessions', label: 'Mentorias agendadas', value: String(upcomingRows[0]?.count ?? 0), total: '4', trend: 'ativo' },
+      { key: 'journey_progress', label: 'Progresso da jornada', value: `${totalProgress}%`, total: '100%', trend: `${completedLessons}/${totalLessons} etapas concluídas` },
+      { key: 'completed_modules', label: 'Módulos concluídos', value: String(completedModules), total: String(modules.length), trend: completedModules === modules.length && modules.length > 0 ? 'jornada completa' : 'em progresso' },
+      { key: 'study_hours', label: 'Horas estimadas', value: String(Math.round(completedLessons * 0.5)), total: String(Math.round(totalLessons * 0.5)), trend: 'baseado nas etapas concluídas' },
+      { key: 'mentoring_sessions', label: 'Mentorias agendadas', value: String(upcomingRows[0]?.count ?? 0), total: '4', trend: 'opcional' },
     ],
     nextSteps,
     activities,
@@ -310,21 +332,42 @@ app.get('/api/jornada/modules/:id/content', requireAuth, asyncHandler(async (req
   if (!row) return res.status(404).json({ message: 'Módulo não encontrado.' });
 
   const { rows: stepRows } = await query(
-    `SELECT step_key AS key, label, description, content_type AS "contentType", position
-     FROM module_steps
-     WHERE module_id = $1
-     ORDER BY position`,
-    [moduleId],
+    `SELECT
+       ms.step_key AS key,
+       ms.label,
+       ms.description,
+       ms.content_type AS "contentType",
+       ms.position,
+       ms.content,
+       CASE WHEN usp.id IS NULL THEN false ELSE true END AS completed
+     FROM module_steps ms
+     LEFT JOIN user_step_progress usp
+       ON usp.module_id = ms.module_id
+      AND usp.step_key = ms.step_key
+      AND usp.user_id = $2
+     WHERE ms.module_id = $1
+     ORDER BY ms.position`,
+    [moduleId, req.user.id],
   );
 
   const { rows: activityRows } = await query(
     `SELECT step_key, form_values, checks, submitted, updated_at
      FROM module_activity_responses
      WHERE user_id = $1 AND module_id = $2
-     ORDER BY updated_at DESC
-     LIMIT 1`,
+     ORDER BY updated_at DESC`,
     [req.user.id, moduleId],
   );
+
+  const activities = activityRows.reduce((acc, item) => {
+    acc[item.step_key] = {
+      stepKey: item.step_key,
+      formValues: item.form_values ?? {},
+      checks: item.checks ?? {},
+      submitted: item.submitted,
+      updatedAt: item.updated_at,
+    };
+    return acc;
+  }, {});
 
   const activity = activityRows[0]
     ? {
@@ -336,7 +379,7 @@ app.get('/api/jornada/modules/:id/content', requireAuth, asyncHandler(async (req
       }
     : null;
 
-  res.json({ module: toModuleContent(row, stepRows, activity) });
+  res.json({ module: toModuleContent(row, stepRows, activity, activities) });
 }));
 
 app.post('/api/jornada/modules/:id/complete', requireAuth, asyncHandler(async (req, res) => {
@@ -356,14 +399,35 @@ app.post('/api/jornada/modules/:id/complete', requireAuth, asyncHandler(async (r
 }));
 
 app.post('/api/jornada/modules/:id/complete-step', requireAuth, asyncHandler(async (req, res) => {
+  const moduleId = Number(req.params.id);
   const stepKey = String(req.body.stepKey || req.body.step_key || 'video');
-  await query(
+
+  const { rows: stepRows } = await query(
+    `SELECT label FROM module_steps WHERE module_id = $1 AND step_key = $2`,
+    [moduleId, stepKey],
+  );
+
+  if (!stepRows[0]) {
+    return res.status(404).json({ message: 'Etapa do módulo não encontrada.' });
+  }
+
+  const { rowCount } = await query(
     `INSERT INTO user_step_progress (user_id, module_id, step_key)
      VALUES ($1, $2, $3)
      ON CONFLICT (user_id, module_id, step_key) DO NOTHING`,
-    [req.user.id, Number(req.params.id), stepKey],
+    [req.user.id, moduleId, stepKey],
   );
-  res.json({ message: 'Etapa concluída.' });
+
+  if (rowCount > 0) {
+    await query(
+      `INSERT INTO user_activities (user_id, title, type)
+       VALUES ($1, $2, 'success')`,
+      [req.user.id, `${stepRows[0].label} concluída no módulo ${moduleId}`],
+    );
+  }
+
+  const moduleRow = await getModuleRowForUser(req.user.id, moduleId);
+  res.json({ message: 'Etapa concluída.', module: moduleRow ? toModule(moduleRow) : null });
 }));
 
 app.get('/api/jornada/modules/:id/activity', requireAuth, asyncHandler(async (req, res) => {
@@ -385,22 +449,44 @@ app.put('/api/jornada/modules/:id/activity', requireAuth, asyncHandler(async (re
   const checks = req.body.checks || {};
   const submitted = Boolean(req.body.submitted ?? false);
 
+  const { rows: stepRows } = await query(
+    `SELECT label, content_type FROM module_steps WHERE module_id = $1 AND step_key = $2`,
+    [moduleId, stepKey],
+  );
+
+  if (!stepRows[0] || stepRows[0].content_type !== 'activity') {
+    return res.status(404).json({ message: 'Atividade do módulo não encontrada.' });
+  }
+
   const { rows } = await query(
     `INSERT INTO module_activity_responses (user_id, module_id, step_key, form_values, checks, submitted)
      VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6)
      ON CONFLICT (user_id, module_id, step_key)
      DO UPDATE SET form_values = EXCLUDED.form_values,
                    checks = EXCLUDED.checks,
-                   submitted = EXCLUDED.submitted,
+                   submitted = module_activity_responses.submitted OR EXCLUDED.submitted,
                    updated_at = now()
      RETURNING step_key, form_values, checks, submitted, updated_at`,
     [req.user.id, moduleId, stepKey, JSON.stringify(formValues), JSON.stringify(checks), submitted],
   );
 
+  if (submitted) {
+    await query(
+      `INSERT INTO user_step_progress (user_id, module_id, step_key)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, module_id, step_key) DO NOTHING`,
+      [req.user.id, moduleId, stepKey],
+    );
+  }
+
   await query(
     `INSERT INTO user_activities (user_id, title, type)
-     VALUES ($1, $2, 'success')`,
-    [req.user.id, `Rascunho salvo no módulo ${moduleId}`],
+     VALUES ($1, $2, $3)`,
+    [
+      req.user.id,
+      submitted ? `${stepRows[0].label} enviada no módulo ${moduleId}` : `Rascunho salvo no módulo ${moduleId}`,
+      submitted ? 'success' : 'info',
+    ],
   );
 
   res.json({
@@ -412,6 +498,31 @@ app.put('/api/jornada/modules/:id/activity', requireAuth, asyncHandler(async (re
       updatedAt: rows[0].updated_at,
     },
   });
+}));
+
+app.get('/api/jornada/responses', requireAuth, asyncHandler(async (req, res) => {
+  const { rows } = await query(
+    `SELECT
+       mar.id,
+       mar.module_id,
+       m.module_order,
+       m.title AS module_title,
+       mar.step_key,
+       ms.label AS step_label,
+       mar.form_values,
+       mar.checks,
+       mar.submitted,
+       mar.created_at,
+       mar.updated_at
+     FROM module_activity_responses mar
+     JOIN modules m ON m.id = mar.module_id
+     LEFT JOIN module_steps ms ON ms.module_id = mar.module_id AND ms.step_key = mar.step_key
+     WHERE mar.user_id = $1
+     ORDER BY mar.updated_at DESC`,
+    [req.user.id],
+  );
+
+  res.json({ responses: rows.map(toActivityResponse) });
 }));
 
 app.get('/api/mentoria', requireAuth, asyncHandler(async (req, res) => {

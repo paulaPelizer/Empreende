@@ -21,9 +21,10 @@ export function toModule(row) {
 
   return {
     id: row.id,
+    moduleOrder: Number(row.module_order ?? row.id),
     title: row.title,
     description: row.description,
-    status: isLocked ? 'locked' : progress >= 100 ? 'completed' : progress > 0 ? 'in-progress' : 'in-progress',
+    status: isLocked ? 'locked' : progress >= 100 ? 'completed' : 'in-progress',
     progress,
     lessons,
     completedLessons,
@@ -31,7 +32,7 @@ export function toModule(row) {
   };
 }
 
-export function toModuleContent(row, steps = [], activity = null) {
+export function toModuleContent(row, steps = [], activity = null, activities = {}) {
   return {
     ...toModule(row),
     sector: row.sector,
@@ -42,6 +43,23 @@ export function toModuleContent(row, steps = [], activity = null) {
     pdfUrl: row.pdf_url,
     steps,
     activity,
+    activities,
+  };
+}
+
+export function toActivityResponse(row) {
+  return {
+    id: row.id,
+    moduleId: row.module_id,
+    moduleOrder: row.module_order,
+    moduleTitle: row.module_title,
+    stepKey: row.step_key,
+    stepLabel: row.step_label,
+    formValues: row.form_values ?? {},
+    checks: row.checks ?? {},
+    submitted: row.submitted,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

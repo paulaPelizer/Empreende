@@ -2,6 +2,7 @@ import api from './api';
 
 export interface JornadaModule {
   id: number;
+  moduleOrder?: number;
   title: string;
   description: string;
   status: 'locked' | 'in-progress' | 'completed';
@@ -25,12 +26,31 @@ export interface JornadaData {
   modules: JornadaModule[];
 }
 
+export interface JornadaFieldConfig {
+  key: string;
+  label: string;
+  placeholder?: string;
+  type?: 'text' | 'textarea';
+}
+
+export interface JornadaStepContent {
+  objectives?: string[];
+  instructions?: string[];
+  title?: string;
+  description?: string;
+  fields?: JornadaFieldConfig[];
+  checklist?: string[];
+  submitLabel?: string;
+}
+
 export interface JornadaStep {
   key: 'video' | 'avaliacao1' | 'pdf' | 'avaliacao2' | string;
   label: string;
   description: string;
   contentType: 'video' | 'activity' | 'pdf' | string;
   position: number;
+  completed?: boolean;
+  content?: JornadaStepContent;
 }
 
 export interface ModuleActivity {
@@ -50,6 +70,7 @@ export interface JornadaModuleContent extends JornadaModule {
   pdfUrl?: string | null;
   steps: JornadaStep[];
   activity?: ModuleActivity | null;
+  activities?: Record<string, ModuleActivity>;
 }
 
 export interface SaveModuleActivityPayload {
@@ -57,6 +78,20 @@ export interface SaveModuleActivityPayload {
   formValues: Record<string, string>;
   checks: Record<string, boolean>;
   submitted?: boolean;
+}
+
+export interface ActivityResponse {
+  id: number;
+  moduleId: number;
+  moduleOrder: number;
+  moduleTitle: string;
+  stepKey: string;
+  stepLabel: string;
+  formValues: Record<string, string>;
+  checks: Record<string, boolean>;
+  submitted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const jornadaService = {
@@ -85,6 +120,11 @@ export const jornadaService = {
       `/jornada/modules/${moduleId}/activity`,
     );
     return data.activity;
+  },
+
+  async getResponses(): Promise<ActivityResponse[]> {
+    const { data } = await api.get<{ responses: ActivityResponse[] }>('/jornada/responses');
+    return data.responses;
   },
 
   async saveModuleActivity(

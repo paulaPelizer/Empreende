@@ -36,6 +36,13 @@ async function run() {
   await query('INSERT INTO notification_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [demoUserId]);
   await query('INSERT INTO preference_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [demoUserId]);
 
+  if (process.env.RESET_DEMO_PROGRESS === 'true') {
+    console.log('RESET_DEMO_PROGRESS=true: limpando progresso e respostas do usuário demo.');
+    await query('DELETE FROM user_step_progress WHERE user_id = $1', [demoUserId]);
+    await query('DELETE FROM module_activity_responses WHERE user_id = $1', [demoUserId]);
+    await query('DELETE FROM user_activities WHERE user_id = $1', [demoUserId]);
+  }
+
   await query(
     `INSERT INTO discussions (user_id, title, content, category)
      SELECT $1, $2, $3, $4

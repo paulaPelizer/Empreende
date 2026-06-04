@@ -1,4 +1,6 @@
-import { Award, BookOpen, Home, MessageSquare, PlaySquare, Settings, Users, X } from 'lucide-react';
+import { Award, BookOpen, ClipboardList, Home, MessageSquare, PlaySquare, Settings, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { jornadaService } from '../../services/jornadaService';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'jornada', label: 'Minha Jornada', icon: BookOpen },
   { id: 'modulo', label: 'Módulo Prático', icon: PlaySquare },
+  { id: 'respostas', label: 'Minhas Respostas', icon: ClipboardList },
   { id: 'mentoria', label: 'Mentoria', icon: Users },
   { id: 'comunidade', label: 'Comunidade', icon: MessageSquare },
   { id: 'certificados', label: 'Certificados', icon: Award },
@@ -18,6 +21,21 @@ const menuItems = [
 ];
 
 export function Sidebar({ isOpen, onClose, activeTab, onTabChange }: SidebarProps) {
+  const [progress, setProgress] = useState(0);
+
+  const refreshProgress = () => {
+    jornadaService
+      .getJornada()
+      .then((data) => setProgress(data.progress?.totalProgress ?? 0))
+      .catch(() => setProgress(0));
+  };
+
+  useEffect(() => {
+    refreshProgress();
+    window.addEventListener('progress:updated', refreshProgress);
+    return () => window.removeEventListener('progress:updated', refreshProgress);
+  }, []);
+
   return (
     <>
       {/* Mobile overlay */}
@@ -57,6 +75,7 @@ export function Sidebar({ isOpen, onClose, activeTab, onTabChange }: SidebarProp
                   onClick={() => {
                     onTabChange(item.id);
                     onClose();
+                    refreshProgress();
                   }}
                   className={`
                     w-full flex items-center gap-3 px-4 py-3 rounded-xl
@@ -79,11 +98,11 @@ export function Sidebar({ isOpen, onClose, activeTab, onTabChange }: SidebarProp
             <div className="bg-gradient-to-br from-[var(--skin-tone-light)] to-[var(--skin-tone)] dark:from-[var(--skin-tone)] dark:to-[var(--skin-tone-dark)] rounded-xl p-4 border border-[var(--skin-tone-dark)]/20">
               <div className="text-sm text-[var(--graphite)]/70 mb-2">Progresso Geral</div>
               <div className="flex items-end gap-2">
-                <div className="text-2xl font-bold text-[var(--coral-neon)]">45%</div>
+                <div className="text-2xl font-bold text-[var(--coral-neon)]">{progress}%</div>
                 <div className="text-sm text-[var(--graphite)]/60 mb-1">completo</div>
               </div>
               <div className="mt-3 h-2 bg-white/80 dark:bg-[var(--card)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--coral-neon)] w-[45%] shadow-sm"></div>
+                <div className="h-full bg-[var(--coral-neon)] shadow-sm" style={{ width: `${progress}%` }}></div>
               </div>
             </div>
           </div>
