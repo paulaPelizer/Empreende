@@ -1,0 +1,60 @@
+# Render Blueprint para subir a plataforma Empreende+ com:
+# 1) Backend Node/Express
+# 2) Frontend React/Vite como Static Site
+# 3) PostgreSQL gerenciado no Render
+#
+# Atenção: se o Render alterar automaticamente os nomes/URLs dos serviços,
+# ajuste VITE_API_URL e CORS_ORIGIN no painel do Render depois do primeiro deploy.
+
+services:
+  - type: web
+    name: empreende-api
+    runtime: node
+    rootDir: ProjetoIntegradorFUMEC-main/backend
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm run render:start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Para MVP acadêmico, deixei aberto para reduzir erro de CORS no primeiro deploy.
+      # Depois, troque pelo domínio real do frontend: https://empreende-frontend.onrender.com
+      - key: CORS_ORIGIN
+        value: '*'
+      - key: DB_SSL
+        value: 'false'
+      # Mantém o usuário demo zerado a cada novo deploy; mude para 'false' se quiser preservar testes do demo.
+      - key: RESET_DEMO_PROGRESS
+        value: 'true'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: empreende-db
+          property: connectionString
+
+  - type: web
+    name: empreende-frontend
+    runtime: static
+    rootDir: ProjetoIntegradorFUMEC-main
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Se o Render gerar outra URL para a API, atualize este valor no painel do frontend.
+      - key: VITE_API_URL
+        value: https://empreende-api.onrender.com/api
+      - key: VITE_SKIP_AUTH
+        value: 'false'
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: empreende-db
+    plan: free
+    databaseName: empreende_db
+    user: empreende_user

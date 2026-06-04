@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: empreende_plus_db
+    environment:
+      POSTGRES_DB: empreende_plus
+      POSTGRES_USER: empreende_user
+      POSTGRES_PASSWORD: empreende_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - empreende_plus_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U empreende_user -d empreende_plus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: empreende_plus_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      CORS_ORIGIN: http://localhost:5173
+      JWT_SECRET: troque-por-uma-chave-grande-e-secreta
+      DATABASE_URL: postgresql://empreende_user:empreende_pass@db:5432/empreende_plus
+    ports:
+      - "8080:8080"
+    command: sh -c "npm run migrate && npm run seed && npm start"
+
+volumes:
+  empreende_plus_pgdata:
