@@ -37,8 +37,12 @@ export function AuthPage({ onAuthSuccess }: AuthPageProps) {
         : await authService.login({ email: email.trim(), password });
 
       onAuthSuccess(response.user);
-    } catch {
-      setError('Não foi possível concluir o acesso. Verifique se o backend está rodando em http://localhost:8080/api.');
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Ops! Não foi possível estabelecer conexão com o servidor. Por favor, verifique sua conexão de internet e tente novamente em alguns instantes.');
+      }
     } finally {
       setLoading(false);
     }
