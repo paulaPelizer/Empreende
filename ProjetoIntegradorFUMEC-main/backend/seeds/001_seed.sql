@@ -84,7 +84,7 @@ INSERT INTO modules (
   'Excel aplicado à gestão de pequenos negócios de alimentos',
   'Desenvolva controles simples para monitorar o fluxo de caixa, calcular custos, registrar vendas e apoiar decisões que contribuam para a sustentabilidade e o crescimento do empreendimento.',
   'Planilha de Controle de Contas a Receber? - Sebrae Talks',
-  'https://www.youtube.com/watch?v=zDy8nB8JwSI&list=PLsYLe6nbpei7AIpBsoVIkydFWFXGesuqe&index=10',
+  'https://www.youtube.com/embed/zDy8nB8JwSI?si=igx7k42Ddmp6gDOD',
   'Informática – Excel básico - Escola de Governo do Distrito Federal',
   'https://egov.df.gov.br/wp-content/uploads/2023/07/Apostila.pdf',
   120,
