@@ -104,10 +104,10 @@ ON CONFLICT (module_order) DO UPDATE SET
   updated_at = now();
 
 -- Mantém apenas os cinco módulos oficiais da jornada.
-UPDATE modules SET is_active = false WHERE module_order NOT IN (1, 2, 3, 4, 5);
+UPDATE modules SET is_active = false WHERE module_order NOT IN (1, 2, 3, 4, 5, 6);
 
 -- Remove etapas antigas dos módulos oficiais antes de recriar a trilha atualizada.
-DELETE FROM module_steps WHERE module_id IN (SELECT id FROM modules WHERE module_order IN (1, 2, 3, 4, 5));
+DELETE FROM module_steps WHERE module_id IN (SELECT id FROM modules WHERE module_order IN (1, 2, 3, 4, 5, 6));
 
 -- Módulo 1: Sobre a empresa: missão, visão e valores
 INSERT INTO module_steps (module_id, step_key, label, description, content_type, position, content)
