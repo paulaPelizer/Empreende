@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Loader2, Lock, Mail, Sparkles } from 'lucide-react';
 import { authService, type User } from '../../services/authService';
+import logo from '../../assets/logo.png';
 
 interface AuthPageProps {
   onAuthSuccess: (user: User) => void;
@@ -79,9 +80,9 @@ export function AuthPage({ onAuthSuccess }: AuthPageProps) {
         </section>
 
         <section className="bg-white/95 dark:bg-[var(--card)] rounded-3xl p-6 md:p-8 border border-gray-200/70 dark:border-[var(--border)] shadow-xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-[var(--coral-neon)] rounded-2xl flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-xl">E</span>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-white p-1 rounded-2xl shadow-md border border-gray-100/50 flex items-center justify-center">
+              <img src={logo} alt="Empreende+" className="h-14 w-auto object-contain" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[var(--graphite)]">

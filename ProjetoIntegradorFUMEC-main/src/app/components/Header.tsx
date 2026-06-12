@@ -1,4 +1,5 @@
 import { Bell, LogOut, Menu, User } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -10,7 +11,7 @@ interface HeaderProps {
 export function Header({ onMenuClick, showMenu = true, onLogout, userEmail }: HeaderProps) {
   return (
     <header className="bg-white/95 dark:bg-[var(--card)] backdrop-blur-sm border-b border-gray-200/50 dark:border-[var(--border)] sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-4">
             {showMenu && (
@@ -21,13 +22,10 @@ export function Header({ onMenuClick, showMenu = true, onLogout, userEmail }: He
                 <Menu className="w-6 h-6" />
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-[var(--coral-neon)] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-lg">E</span>
+            <div className="flex items-center">
+              <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-100/50 flex items-center justify-center">
+                <img src={logo} alt="Empreende+" className="h-9 w-auto object-contain" />
               </div>
-              <span className="text-xl font-bold text-[var(--graphite)]">
-                Empreende<span className="text-[var(--coral-neon)]">+</span>
-              </span>
             </div>
           </div>
 
